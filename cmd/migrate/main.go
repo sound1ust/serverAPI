@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -24,12 +25,12 @@ func main() {
 	}
 	cmd := os.Args[(len(os.Args) - 1)]
 	if cmd == "up" {
-		if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 			log.Fatal(err)
 		}
 	}
 	if cmd == "down" {
-		if err := m.Down(); err != nil && err != migrate.ErrNoChange {
+		if err := m.Down(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 			log.Fatal(err)
 		}
 	}
