@@ -10,15 +10,14 @@ import (
 )
 
 func main() {
-	db, _ := repo.NewPostgresDB(
-		fmt.Sprintf("postgres://%v:%v@%v:%v/%v?sslmode=disable",
-			config.Env.DBUser,
-			config.Env.DBPassword,
-			config.Env.Host,
-			config.Env.Port,
-			config.Env.DBName,
-		),
+	dsn := fmt.Sprintf("postgres://%v:%v@%v:%v/%v?sslmode=disable",
+		config.Env.DBUser,
+		config.Env.DBPassword,
+		config.Env.Host,
+		config.Env.Port,
+		config.Env.DBName,
 	)
+	db, _ := repo.NewPostgresDB(dsn)
 	initStorage(db)
 	server := api.NewAPIServer("localhost:8000", db)
 	if err := server.Run(); err != nil {
