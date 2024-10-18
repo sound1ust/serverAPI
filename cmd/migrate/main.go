@@ -11,6 +11,16 @@ import (
 	"serverAPI/config"
 )
 
+type Logger struct{}
+
+func (l *Logger) Printf(format string, v ...interface{}) {
+	fmt.Printf(format, v...)
+}
+
+func (l *Logger) Verbose() bool {
+	return true
+}
+
 func main() {
 	dsn := fmt.Sprintf("postgres://%v:%v@%v:%v/%v?sslmode=disable",
 		config.Env.DBUser,
@@ -23,15 +33,20 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	m.Log = &Logger{}
+
 	cmd := os.Args[(len(os.Args) - 1)]
 	if cmd == "up" {
 		if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 			log.Fatal(err)
 		}
-	}
-	if cmd == "down" {
+		fmt.Println("Successfully applied migrations!")
+	} else if cmd == "down" {
 		if err := m.Down(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 			log.Fatal(err)
 		}
+		fmt.Printf("Successfully reverted migrations!")
+	} else {
+		log.Fatalf("Unknown action: %s", cmd)
 	}
 }

@@ -14,5 +14,5 @@ make migrate-up
 After that, you can run the project with the following command:
 
 ```bash
-make run
+go run cmd/main.go
 ```
