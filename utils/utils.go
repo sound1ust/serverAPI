@@ -32,6 +32,6 @@ func WriteError(w http.ResponseWriter, status int, err error) {
 	log.Printf("Error: %v", err)
 	if jsonErr := WriteJSON(w, status, map[string]string{"error": err.Error()}); jsonErr != nil {
 		log.Printf("JSON writing error: %v", jsonErr)
-		http.Error(w, "An error occurred", http.StatusInternalServerError)
+		http.Error(w, "server error occurred", http.StatusInternalServerError)
 	}
 }
