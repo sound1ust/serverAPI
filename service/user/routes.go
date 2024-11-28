@@ -1,9 +1,11 @@
 package user
 
 import (
+	"errors"
 	"fmt"
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
+	"golang.org/x/crypto/bcrypt"
 	"log"
 	"net/http"
 	"serverAPI/service/auth"
@@ -35,6 +37,37 @@ func (h *Handler) handleTest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
+	var payload types.LoginUserPayload
+	if err := utils.ParseJSON(r, &payload); err != nil {
+		utils.WriteError(w, http.StatusBadRequest, err)
+	}
+	if err := utils.Validate.Struct(payload); err != nil {
+		var errs validator.ValidationErrors
+		errors.As(err, &errs)
+		utils.WriteError(w, http.StatusBadRequest, errs)
+		return
+	}
+
+	user, err := h.store.GetUserByEmail(payload.Email)
+	if errors.Is(err, NotFoundError) {
+		utils.WriteError(
+			w, http.StatusBadRequest,
+			fmt.Errorf("invalid password or email"),
+		)
+		return
+	} else if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("server error occured"))
+		return
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(payload.Password))
+	if err != nil {
+		utils.WriteError(w, http.StatusUnauthorized, fmt.Errorf("invalid password or email"))
+		return
+	}
+	if err = utils.WriteJSON(w, http.StatusOK, nil); err != nil {
+		http.Error(w, "server error occurred", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
@@ -44,8 +77,9 @@ func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := utils.Validate.Struct(payload); err != nil {
-		errors := err.(validator.ValidationErrors)
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid payload: %v", errors))
+		var errs validator.ValidationErrors
+		errors.As(err, &errs)
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid payload: %v", errs))
 		return
 	}
 
@@ -60,7 +94,7 @@ func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
 
 	hashedPassword, err := auth.HashPassword(payload.Password)
 	if err != nil {
-		utils.WriteError(w, http.StatusInternalServerError, err)
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("server error occured"))
 	}
 
 	err = h.store.CreateUser(&types.User{
@@ -73,6 +107,6 @@ func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
 		utils.WriteError(w, http.StatusInternalServerError, err)
 	}
 	if err = utils.WriteJSON(w, http.StatusCreated, nil); err != nil {
-		http.Error(w, "An error occurred", http.StatusInternalServerError)
+		http.Error(w, "server error occurred", http.StatusInternalServerError)
 	}
 }
